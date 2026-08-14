@@ -1,6 +1,6 @@
 # AI Project Governance — Template
 
-**Template version: 1**
+**Template version: 2**
 
 > Monotonic integer, same reasoning as `INC-XXX` (§5): no semver, because there is no
 > dependency to resolve and no "is this a minor?" to argue about. Bump it when a change would
@@ -751,8 +751,14 @@ rc=0
 while IFS=: read -r file _ ref; do
   ref="${ref%\`*}"
   [[ -e "$ref" ]] || { echo "BROKEN: $file → $ref"; rc=1; }
+# Append-only historical records are excluded by design: a CHANGELOG entry, an ADR, or an
+# archived SPEC is SUPPOSED to name paths that no longer exist. Retirement (§4 Phase 4) deletes
+# feature folders, so every past reference to them would otherwise be rot forever. Only
+# documents that claim to describe the present are checked.
+EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md'
+
 done < <(grep -rnoE '`(docs|src|features|tools)/[A-Za-z0-9._/-]+`' --include='*.md' . \
-         | grep -v node_modules | tr -d '`')
+         | grep -vE "$EXCLUDE" | tr -d '`')
 exit $rc
 ```
 
