@@ -223,6 +223,21 @@ non-feature-grade work. Three tiers:
 **Deciding.** If you are unsure between Small and Feature, ask: *does this need more than one
 session, or did I choose between real alternatives?* Either yes → Feature.
 
+### The tier also caps what gets read
+
+Artifacts produced are only half of it. The recurring cost of a governance system is what the
+agent *reads* before it starts, on every task, forever — so the tier gates that too:
+
+| Tier | Reads before starting |
+|---|---|
+| **Trivial** | Nothing. Open the file and fix it. |
+| **Small** | `AGENTS.md`, plus the files being changed. Not the architecture, not the roadmap. |
+| **Feature** | The full reading order — `AGENTS.md` → `ARCHITECTURE.md` → `PROJECT.md` — plus the feature's `SPEC.md`. |
+
+An unconditional reading order costs several hundred lines of context on every task, most of
+them irrelevant to a two-line fix. `CHANGELOG.md`, `docs/adr/`, and `docs/archive/` are never
+read wholesale at any tier: query them for the one entry you need.
+
 **Rationale.** The previous version of this system defined non-trivial as "anything beyond a
 typo", which meant a 20-line bugfix earned a folder, a SPEC, a PROMPT, and an ADR. In practice
 the ceremony got skipped — including on the work that actually needed it. Tiering restores the
@@ -558,6 +573,11 @@ Before a handoff is executed — by a human glance or by a script (§11):
    context. Use search or a delegated explorer for broad sweeps instead of dumping files into
    the main context. Keep status updates and summaries lean — decisions and outcomes, not
    narration.
+   **Get a fact by running the command that prints it, not by reading the file that holds it.**
+   The next increment number is `grep -m1 '^## INC-' CHANGELOG.md`, not a read of a
+   four-thousand-line changelog. The same goes for the branch, the changed files, whether a
+   path exists. A command returns the exact fact for a handful of tokens; a file read returns
+   the fact plus everything around it, forever, in context.
 
 7. **Verify, don't trust.** A subordinate's report that the gate passed is not evidence.
    Re-run the gate; the exit code decides. Read the diff of what a worker changed before
@@ -599,6 +619,12 @@ Operational bootstrap. Defines *how* to work, not *what* the system is.
 > 2. **Is this discoverable in seconds?** Script names in `package.json`, the directory layout,
 >    the framework in use — the agent can read those. Write down only what it cannot infer:
 >    invariants, conventions, and the reasoning behind non-obvious choices.
+>
+> **Give it a budget and treat overruns as defects.** ~120 lines is a workable ceiling for a
+> single-project repo. This is the only file in the system with a *recurring* cost — everything
+> else (CHANGELOG entries, ADRs, SPECs) is written once and read on demand. Optimizing what you
+> record is mostly wasted effort; optimizing what gets read on every turn is where the spend
+> actually is.
 >
 > The template below is deliberately at the short end. Cut further if your project allows;
 > resist growing it.
@@ -748,17 +774,22 @@ a script, not an agent.
 # docs-check.sh — fail if a markdown doc references a repo path that doesn't exist.
 set -uo pipefail
 rc=0
-while IFS=: read -r file _ ref; do
-  ref="${ref%\`*}"
-  [[ -e "$ref" ]] || { echo "BROKEN: $file → $ref"; rc=1; }
+
 # Append-only historical records are excluded by design: a CHANGELOG entry, an ADR, or an
 # archived SPEC is SUPPOSED to name paths that no longer exist. Retirement (§4 Phase 4) deletes
 # feature folders, so every past reference to them would otherwise be rot forever. Only
-# documents that claim to describe the present are checked.
-EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md'
+# documents that claim to describe the present are checked. The last entry is a no-op in an
+# adopting project; it keeps this one script identical everywhere, including the repo where
+# this manual itself lives.
+EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_template\.md'
 
+while IFS=: read -r file _ ref; do
+  ref="${ref%\`*}"
+  [[ -e "$ref" ]] || { echo "BROKEN: $file → $ref"; rc=1; }
 done < <(grep -rnoE '`(docs|src|features|tools)/[A-Za-z0-9._/-]+`' --include='*.md' . \
          | grep -vE "$EXCLUDE" | tr -d '`')
+
+[[ $rc -eq 0 ]] && echo "docs ok"
 exit $rc
 ```
 
@@ -924,7 +955,46 @@ kill a link mid-run (expect `inc_base` to locate the break on restart).
 ## 12. Reference Implementations
 
 The pattern needs exactly one capability: **a way to start a fresh agent session
-non-interactively**. Two shapes.
+non-interactively, pointed at this repository, that returns a summary when it is done.**
+
+All three properties are load-bearing. *Fresh* — no inherited context, or §6 was pointless.
+*Pointed at this repository* — the worker reads the repo's files and inherits the repo's rules,
+or it is guessing. *Returns a summary* — the reasoner's context grows by a few lines per link,
+not by a transcript.
+
+Most agent-interop channels provide none of the three. Check before adopting one:
+
+| Channel | What it actually is | Fit as a delegation transport |
+|---|---|---|
+| **Headless CLI invocation** | One OS process per task, given the repo path | **Yes.** Fresh by construction, repo-bound by argument, exits with the result. §12b. |
+| **In-agent subagent spawn** (a `delegate_task`-style tool) | A child inside the running agent process | **Yes, while you're watching.** Dies with the session. §12c. |
+| **Agent-to-agent messaging protocols** (A2A and every chat bridge) | A task delivered as a *message* to an already-running agent | **No.** See below. |
+| **MCP** | A server exposing *tools* to an agent | **No.** MCP gives an agent capabilities; it does not start an agent. |
+
+**Why an agent-to-agent messaging protocol is not a delegation transport.** It looks like one:
+an orchestrator assigns a task to an independent agent, which uses its own tools and returns a
+result. The failure is in the middle of that sentence — *already-running*. A task arriving over
+a messaging protocol lands in a live session, in whatever working directory that session
+happens to have, sharing that session's memory and history. There is no repo argument, so
+nothing binds the work to the project whose rules the handoff assumes. Worse, a well-built
+implementation treats peer input as **untrusted** — injection-filtered, redacted on the way
+out, operator commands refused — which is correct for an internet-facing endpoint and exactly
+wrong for a handoff, whose whole value is being a precise, trusted instruction set. Add that
+the orchestrator usually has no client for the protocol anyway (so you wrap it in a tool
+server or a shell command, arriving back where you started), and it is a long path to a worse
+version of `<cli> --one-shot --in <repo>`.
+
+Use those protocols for what they are: reaching an agent that is *already alive and elsewhere*
+— notifications, cross-machine chat, a human in the loop on a phone. Not for making one.
+
+> **Cached external fact — checked 2026-08-14 against the Hermes Agent docs
+> (`/docs/user-guide/messaging/a2a`).** Hermes' A2A support is configured under
+> `gateway.platforms` alongside Telegram/Discord/Slack; inbound tasks are "injected into a live
+> gateway session — the same agent, memory, and tools that serve your other channels", with
+> prompt-injection filtering, outbound credential redaction, and slash commands refused for
+> remote peers. That is the shape described above: a channel, not a worker spawner. Its MCP
+> server (`hermes mcp serve`) exposes conversations and messages — also a bridge. **Live docs
+> win on conflict**; the pattern in §11 depends on none of this.
 
 ### 12a. Shell loop (most portable, most robust)
 
@@ -964,56 +1034,110 @@ echo "STOP: link cap reached — human review required"
 | Clean failure | Any check fails → stop with a diagnosis; all state is on disk |
 | Survives the agent tool | A crashed session doesn't destroy the chain — re-run the script |
 
-### 12b. In-agent dispatcher (example: Hermes Agent)
+### 12b. Delegating one task to an external worker (headless CLI)
 
-Reference only. Convenient when you want live progress and one session to talk to.
+This is the worker leg — what step 4 of the link protocol calls, whether the caller is the
+shell loop of §12a or a reasoning session delegating a single mechanical batch.
 
-> **Cached external facts — verified against the Hermes Agent docs on 2026-08-14
-> (`hermes-agent.nousresearch.com/docs/user-guide/features/delegation` and
-> `/docs/guides/delegation-patterns`).** They are recorded here so a session doesn't have to
-> re-explore vendor docs to act. **On any conflict, the live docs win and this block is the
-> thing that's wrong** — fix it in the same increment that discovers the drift. What the
-> *pattern* needs is in §11 and does not depend on any of this.
+The invocation is the same shape in every tool that has one. Five capabilities matter; the
+flag names differ, the list does not:
 
-- `delegate_task` spawns an **isolated child**: own conversation, own terminal session, own
-  toolset. The child sees only the `goal` and `context` strings — no conversation history.
-  Only the child's **final summary** returns to the parent.
-- **Top-level delegation is asynchronous**: Hermes returns a handle immediately and posts the
-  result back as a new message. Delegations made *by* an orchestrator child are synchronous —
-  that child blocks on its workers.
-- **Durability is partial.** Normal follow-up messages do **not** cancel running background
-  children. But `/stop` cancels them, and `/new`, closing the session, or a process restart
-  discards or strands in-progress work. Everything stays tied to the owning process. For work
-  that must survive those boundaries the docs point to `cronjob` or
-  `terminal(background=True, notify_on_complete=True)`.
-- **Children are stripped of** `delegate_task` (leaf children only), `clarify`, `memory`,
-  `send_message`, and `cronjob`. **Both roles keep `execute_code`.**
-- `max_spawn_depth` **defaults to 1** (flat). This pattern needs **2**
-  (dispatcher → session → worker) and never more.
-- `max_concurrent_children` defaults to 3, configurable, no hard ceiling.
-- **Model selection: no per-task parameter.** If omitted, subagents use the parent's model.
-  A global `delegation.model` setting overrides that for *all* delegations.
+| Capability | Why the pattern needs it |
+|---|---|
+| **One-shot / print mode** | Only the final result reaches stdout. No TUI, no transcript to parse. |
+| **Working directory** | The worker runs *in the repo* and inherits its `AGENTS.md` — this is what makes a worker governed rather than improvising. |
+| **Approval bypass** | No TTY is present. See the safety note below before using it. |
+| **Isolation** (optional) | A dedicated git worktree, so parallel workers on disjoint scopes can't collide. |
+| **Usage accounting** (optional) | A per-call cost report, written even when the call fails. |
 
-```yaml
-# ~/.hermes/config.yaml
-delegation:
-  max_spawn_depth: 2           # REQUIRED — default 1 forbids the worker level
-  max_concurrent_children: 3   # 1 per link is what this pattern uses
-  orchestrator_enabled: true
-  # model: <cheaper-model>     # optional: applies to ALL delegated children
+```bash
+<agent-cli> --one-shot "PROMPT" --model <model> --in <absolute/repo/path> \
+            --auto-approve --usage-file <path>
 ```
 
-**Two consequences worth internalizing:**
+> **Cached external fact — checked 2026-08-14, Hermes Agent.** The above reads
+> `hermes -z "PROMPT" -m <model> --provider <provider> --in <path> --yolo --usage-file <path>`;
+> `--worktree` gives the isolated tree, `--reasoning <level>` tunes effort, `--ignore-rules`
+> skips repo-rule injection. **Live docs win on conflict.**
 
-1. **Cost tiering is possible, but only globally.** Rule 4's task tiering is primarily *process*
-   tiering here — context isolation, restricted toolsets, capped iterations. If you want
-   workers on a cheaper model, `delegation.model` gets you there for every child at once; a
-   genuinely per-role model requires running that role as an external headless process
-   (§12a) or a separate profile.
+**Rule 4 in one sentence: delegate transcription, never adjudication.** A task whose output is
+a judgement call — and every stage gate — stays with the reasoning session. If you cannot write
+the acceptance criterion into the prompt, the task is not ready to delegate.
 
-2. **For truly unattended runs, prefer §12a.** In-agent delegation is tied to a session and a
-   process; the shell loop is tied to neither, and its state is on disk. Use the in-agent
-   dispatcher when you're around to watch; use the shell loop when you're not.
+### When delegation is worth it
+
+**Delegation does not reduce token spend. It moves spend off the expensive context.** Total
+tokens go *up* — a delegated task costs the spec you wrote, plus a fixed startup floor, plus
+the worker's own run, plus the verification you owe it under rule 7. Rule 4 already says this
+out loud: preserving reasoning context is worth more than minimizing total tokens. If your goal
+is the smallest possible bill, delegate less. If it is longer-lived reasoning sessions and
+fewer restarts, delegate more. They are different goals; pick knowingly.
+
+**The break-even is a ratio, not a size.** Delegate when the *specification is much smaller
+than the work*:
+
+```
+delegate  ≈  spec + floor + verification        (verification is not optional)
+direct    ≈  the context the work consumes inline
+```
+
+A task that burns 50k tokens of reading and iteration but fits in a 500-token spec is an
+enormous win. A task that needs a 2k spec to save 5k of work is a loss, and you found out by
+writing the spec — at which point you had already done the thinking. **If you cannot compress
+the task, you have already done it: just finish it.**
+
+**The floor is per call, so batch.** Every invocation pays for a system prompt, tool schemas,
+and repo-rule injection before reading a word of the task — on one current CLI that measures
+~16k input tokens for a three-word prompt. Ten micro-delegations pay it ten times. One call
+with ten deliverables pays it once. Below some size the trip costs more than the cargo.
+
+**Whose tokens are they?** The floor is only expensive if you are paying per token for it.
+Where the worker runs on a subscription-covered model and the reasoner does not, the floor
+costs latency rather than money, and the scarce resource is the reasoner's context and rate
+limit — delegate freely, subject to the compression test above. Where the worker is metered and
+the reasoner is flat, the arithmetic inverts. Establish which you are in before tuning
+anything: it changes the answer more than any flag does.
+
+**Skipping rule injection is a false economy here.** A flag that omits `AGENTS.md` from the
+worker's context cuts part of the floor and, with it, the only reason the worker is governed
+rather than improvising. Use it for pure transformations with no repo context — never for work
+that touches the project's conventions.
+
+**Approval bypass is only as safe as the scope.** A worker running unattended with approvals
+off is bounded by exactly three things: an explicit file list in the handoff, a clean working
+tree (or a dedicated worktree), and the reasoner reading the diff afterwards. If any of the
+three is missing, don't pass the flag.
+
+### 12c. In-agent dispatcher
+
+Reference only. Convenient when you want live progress and one session to talk to; unsuitable
+for unattended runs, because it is tied to a session and a process while §12a is tied to
+neither.
+
+A `delegate_task`-style tool spawns an isolated child — own conversation, own toolset, no
+conversation history; only the child's final summary returns. Three constraints recur across
+implementations and are worth checking in yours before relying on it:
+
+- **Spawn depth.** This pattern needs exactly 2 (dispatcher → session → worker) and never
+  more. A default of 1 forbids the worker level outright.
+- **Durability.** Children die with the owning session or process. Whatever "clear the
+  session" is called in your tool, it strands in-flight work.
+- **Model selection is usually global, not per task.** Which means rule 4's tiering lands here
+  as *process* tiering — context isolation, restricted toolsets — not cost tiering. Per-role
+  models need §12a or §12b.
+
+- **Durable alternatives usually exist alongside it.** A scheduler or a backgrounded shell
+  command typically survives what kills a spawned child. If a run must outlive the session,
+  that is the mechanism — not a longer-lived child.
+
+> **Cached external fact — checked 2026-08-14, Hermes Agent.** `delegation.max_spawn_depth`
+> defaults to 1 and must be set to 2; `max_concurrent_children` defaults to 3;
+> `delegation.model` applies to *all* children; children are stripped of `memory`,
+> `send_message`, `clarify`, and `cronjob` — but **keep `execute_code`**, which is what makes
+> them useful as workers. Top-level delegation is **asynchronous** (returns a handle, posts the
+> result back later); delegations made *by* an orchestrator child are synchronous. For work that
+> must survive `/stop`, `/new`, or a process restart the docs point to `cronjob` or
+> `terminal(background=True, notify_on_complete=True)`. **Live docs win on conflict.**
 
 **Operational rule: don't message the dispatcher while a chain is running.** Not because it
 destroys work — background children survive a normal follow-up message — but because the
@@ -1023,29 +1147,29 @@ derails into doing something you didn't ask for. If you must intervene, interven
 boundary. `/stop`, `/new`, closing the session, or restarting the process *do* discard
 in-flight work.
 
-### 12c. Which model runs which role
+### 12d. Which model runs which role
 
 The system's task tiering (§7 rule 4) only becomes *cost* tiering if the roles can run on
 different models. How that's achieved depends on a constraint most people meet the hard way:
 
-**Subscription plans are generally first-party only.** A chat subscription entitles you to a
-vendor's own clients — their web app, their CLI, their IDE extension. It does not, as a rule,
-authorize a third-party agent framework to spend that subscription. Third-party tools need a
-metered API key, billed separately from the subscription you already pay for. Where a given
-framework *does* work against some vendor's subscription, that's a vendor-specific auth path,
-not a general capability — so "it works with vendor A" predicts nothing about vendor B. This is
-policy, not configuration: no config file fixes it.
+**Subscription plans are first-party by default.** A chat subscription entitles you to a
+vendor's own clients — their web app, their CLI, their IDE extension. It does not, by default,
+authorize a third-party agent framework to spend it; that generally needs a metered API key,
+billed separately. But some frameworks *do* ship an authorized OAuth path to some vendor's
+subscription, and those lists change. So: **read your framework's provider list before assuming
+metered**, and don't generalize — "it works with vendor A" predicts nothing about vendor B.
+This is policy, not configuration: where the path doesn't exist, no config file creates it.
 
 The practical arrangement that falls out of this:
 
 | Role | Runs on | Billing |
 |---|---|---|
 | **Reasoner** — planning, specs, verification, docs | The vendor's own client, on your subscription | Flat / already paid |
-| **Worker** — mechanical implementation from a complete spec | A cheap metered model in the agent framework | Per-token, small |
+| **Worker** — mechanical implementation from a complete spec | Whatever the framework can authorize: a subscription-covered model where that path exists, otherwise a cheap metered one | Flat, or per-token and small |
 
-This is the arrangement §12a exists for: the shell loop invokes whatever CLI you want per link,
+This is the arrangement §12a and §12b exist for: a per-call CLI invocation names its own model,
 so the reasoner and worker roles need not share a provider at all. The in-agent dispatcher of
-§12b can only apply one model per install (a global setting), which makes it fine for the
+§12c typically applies one model per install (a global setting), which makes it fine for the
 worker tier and unsuitable for mixing tiers.
 
 **Do not fight this by trying to route a subscription through a third-party tool.** Either pay
@@ -1108,6 +1232,8 @@ number, assume it is a wash.
 | Planning that lives only in chat | Lost on the next clear | Write `SPEC.md` before implementing |
 | "Just this once" bypass of an invariant | Normalizes deviation; the system erodes from the exception, not the rule | If an invariant is wrong, change it deliberately — don't route around it |
 | Vendor paths hard-coded into the governance doc | Breaks on the next tool | Rules are portable; placement is per-project (§7) |
+| A messaging or tool protocol used as a delegation transport | The task arrives as untrusted chat input to a session that isn't bound to the repo | Delegation starts a *fresh, repo-bound* session (§12) |
+| Delegating micro-questions | Every call pays a fixed multi-thousand-token floor before reading the task | Delegate consistent batches, or do it inline (§12b) |
 
 ---
 
