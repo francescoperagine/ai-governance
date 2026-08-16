@@ -758,16 +758,24 @@ missing.
 
 ```bash
 #!/usr/bin/env bash
-# scaffold.sh — create governance structure if absent. Never overwrites.
+# scaffold.sh — create the governance structure if absent. Never overwrites.
+# Idempotent: safe to run against a repo that is already partly set up.
+# See ai_governance_template.md §9.
 set -euo pipefail
+
+cd "${1:-.}"
+
 mkdir -p docs/adr docs/archive/features features
-[[ -f AGENTS.md ]]              || echo "# AGENTS.md — Operational Bootstrap"     > AGENTS.md
-[[ -f CHANGELOG.md ]]           || printf '# Changelog\n\nIncrements are recorded here, newest first.\n' > CHANGELOG.md
-[[ -f docs/ARCHITECTURE.md ]]   || echo "# Architecture"      > docs/ARCHITECTURE.md
-[[ -f docs/PROJECT.md ]]        || echo "# Project"           > docs/PROJECT.md
-[[ -f docs/ROADMAP.md ]]        || echo "# Roadmap"           > docs/ROADMAP.md
-[[ -f docs/todo.md ]]           || echo "# Todo (maintainer only)" > docs/todo.md
-echo "scaffold ok"
+
+[[ -f AGENTS.md ]]            || echo "# AGENTS.md — Operational Bootstrap" > AGENTS.md
+[[ -f CHANGELOG.md ]]         || printf '# Changelog\n\nIncrements are recorded here, newest first.\n' > CHANGELOG.md
+[[ -f docs/ARCHITECTURE.md ]] || echo "# Architecture" > docs/ARCHITECTURE.md
+[[ -f docs/PROJECT.md ]]      || echo "# Project"      > docs/PROJECT.md
+[[ -f docs/ROADMAP.md ]]      || echo "# Roadmap"      > docs/ROADMAP.md
+[[ -f docs/todo.md ]]         || echo "# Todo (maintainer only)" > docs/todo.md
+
+echo "scaffold ok — $(pwd)"
+echo "next: fill AGENTS.md from the template (§8), then write ARCHITECTURE.md once code exists"
 ```
 
 `docs/ARCHITECTURE.md` is a stub on purpose: write it **after** the first code exists, or it
@@ -785,15 +793,22 @@ a script, not an agent.
 ```bash
 #!/usr/bin/env bash
 # docs-check.sh — fail if a markdown doc references a repo path that doesn't exist.
+# Catches link rot: a CHANGELOG pointing at a file that moved into docs/archive/
+# misleads every future session, silently and forever.
+# See ai_governance_template.md §9.
 set -uo pipefail
+
+cd "${1:-.}"
 rc=0
 
-# Append-only historical records are excluded by design: a CHANGELOG entry, an ADR, or an
-# archived SPEC is SUPPOSED to name paths that no longer exist. Retirement (§4 Phase 4) deletes
-# feature folders, so every past reference to them would otherwise be rot forever. Only
-# documents that claim to describe the present are checked. The last entry is a no-op in an
-# adopting project; it keeps this one script identical everywhere, including the repo where
-# this manual itself lives.
+# Append-only historical records are EXCLUDED by design. A CHANGELOG entry, an ADR, or an
+# archived SPEC is supposed to name paths that no longer exist — that is what history is.
+# Retiring a feature (§4 Phase 4) deletes its folder, and every past reference to it would
+# otherwise be reported as rot forever. Only documents that claim to describe the present
+# are checked.
+# The two ai_governance_*.md files are excluded for the same reason: they are the manual, and
+# they name paths (docs/PROJECT.md, features/<name>/SPEC.md) that exist in adopting projects,
+# not here.
 EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_[a-z]+\.md'
 
 while IFS=: read -r file _ ref; do
