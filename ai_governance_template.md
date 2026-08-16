@@ -794,7 +794,7 @@ rc=0
 # documents that claim to describe the present are checked. The last entry is a no-op in an
 # adopting project; it keeps this one script identical everywhere, including the repo where
 # this manual itself lives.
-EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_template\.md'
+EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_[a-z]+\.md'
 
 while IFS=: read -r file _ ref; do
   ref="${ref%\`*}"
