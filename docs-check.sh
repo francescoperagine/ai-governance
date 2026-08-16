@@ -13,9 +13,10 @@ rc=0
 # Retiring a feature (§4 Phase 4) deletes its folder, and every past reference to it would
 # otherwise be reported as rot forever. Only documents that claim to describe the present
 # are checked.
-# ai_governance_template.md is excluded for the same reason: it is the manual, and it names
-# paths (docs/PROJECT.md, features/<name>/SPEC.md) that exist in adopting projects, not here.
-EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_template\.md'
+# The two ai_governance_*.md files are excluded for the same reason: they are the manual, and
+# they name paths (docs/PROJECT.md, features/<name>/SPEC.md) that exist in adopting projects,
+# not here.
+EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_[a-z]+\.md'
 
 while IFS=: read -r file _ ref; do
   ref="${ref%\`*}"

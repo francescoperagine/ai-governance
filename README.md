@@ -7,6 +7,11 @@ thing is optionally automated.
 **[`ai_governance_template.md`](ai_governance_template.md) is the whole system.** The two
 scripts are extracted from its §9 so they don't have to be copy-pasted per project.
 
+[`ai_governance_rationale.md`](ai_governance_rationale.md) holds the optional automation
+(§11–§12), the note on context-compression proxies (§13), and the design rationale (§15).
+Adopting projects never read it. It is separate so that revising it — reference implementations
+age, cached vendor facts age faster — does not bump the template's version.
+
 ## Use it
 
 Hand `ai_governance_template.md` to an agent in the target project, with no other instruction.
@@ -37,5 +42,5 @@ have been stable for two revisions.
 
 ## Scope
 
-Deliberately four files. No CI, no tests, no generator CLI. The failure mode for a personal
+Deliberately five files. No CI, no tests, no generator CLI. The failure mode for a personal
 governance system is not being too small — it is becoming a product.
