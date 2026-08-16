@@ -1,6 +1,6 @@
 # AI Project Governance — Template
 
-**Template version: 2**
+**Template version: 3**
 
 > Monotonic integer, same reasoning as `INC-XXX` (§5): no semver, because there is no
 > dependency to resolve and no "is this a minor?" to argue about. Bump it when a change would
@@ -203,8 +203,6 @@ sessions.
 | **Rules must match reality** | A mandatory rule that is disobeyed half the time is a broken rule, not a discipline problem. Fix the rule. |
 | **Compression without loss** | Every rule exists in exactly one canonical place. If it's in a linked file, don't restate it inline. |
 | **Don't restate what a tool enforces** | If a linter, formatter, type checker, hook, or CI gate already enforces a constraint deterministically, writing it into `AGENTS.md` buys nothing and costs tokens on every turn. Prose is for what no tool can check. |
-| **Self-concluding sessions** | A task ends with a deliverable, not a question. |
-| **Verification, not trust** | A claim that "tests pass" is not evidence. The exit code is. |
 | **External facts are cached, dated, subordinate** | Third-party tool behavior changes faster than this document. Record it anyway — re-exploring vendor docs every session costs more than a stale line, and web access isn't always available. But stamp it with a date, name the source, and state that the live docs win on conflict. Same shape as *code wins over docs*, one level out. |
 
 ---
@@ -295,10 +293,13 @@ than no folder: it tells the next session that unfinished work exists when it do
 
 ```
 1. Read AGENTS.md → docs/ARCHITECTURE.md → docs/PROJECT.md
-2. Create features/<feature-name>/   (kebab-case)
-3. Write SPEC.md — scope, decisions, acceptance criteria, phase ledger
-4. Write PROMPT.md — self-contained entry point, mode: implement
-5. Self-conclude: deliver SPEC.md + PROMPT.md. Do NOT start implementing.
+2. Interrogate the request before scoping it — unstated assumptions, missing constraints,
+   what "done" means, what is deliberately out. One batch (§7 rule 2), answers into the SPEC.
+   A spec written from an unexamined request specifies the wrong thing precisely.
+3. Create features/<feature-name>/   (kebab-case)
+4. Write SPEC.md — scope, decisions, acceptance criteria, phase ledger
+5. Write PROMPT.md — self-contained entry point, mode: implement
+6. Self-conclude: deliver SPEC.md + PROMPT.md. Do NOT start implementing.
 ```
 
 ### Phase 2 — Implement (fresh session)
@@ -583,6 +584,14 @@ Before a handoff is executed — by a human glance or by a script (§11):
    Re-run the gate; the exit code decides. Read the diff of what a worker changed before
    documenting it as done.
 
+8. **Simplest thing that works.** Prefer what already exists — the standard library, a native
+   platform feature, an installed dependency, a helper already in this repo — over new code,
+   and new code over a new dependency. No abstraction with one implementation, no configuration
+   for a value that never changes, no scaffolding for a requirement nobody has stated. Tests
+   follow the same rule: non-trivial logic leaves one runnable check behind, not a suite.
+   A deliberate shortcut is fine when a comment names its ceiling; an unrequested
+   generalization is not.
+
 ### Where to put these rules
 
 **Best: the system prompt.** If the tool supports behavioral instructions injected at the
@@ -650,7 +659,7 @@ section first and must not undo what it lists. Empty is a valid value._
 
 ## Behavioral Rules (MANDATORY — read first)
 
-[EITHER paste the seven rules from §7 of the governance template here,
+[EITHER paste the eight rules from §7 of the governance template here,
  OR — if this tool supports system-level instructions — replace this section with:]
 
 > Operate per the behavioral rules in `[.cursorrules | output style | system prompt]`.
@@ -807,14 +816,15 @@ rate is telling you something true.
 ## 10. Project Skills (vendor-neutral)
 
 Most agent tools support some form of reusable named procedure — skills, commands, prompts,
-modes. The mechanism differs; the useful set does not. Define these three by **role**, and
-implement them however your tool allows:
+modes. The mechanism differs; the useful set does not. Define these by **role**, and implement
+them however your tool allows:
 
 | Skill role | Trigger | What it does |
 |---|---|---|
 | **bootstrap** | New project, or governance missing | Runs §9 scaffolding, fills `AGENTS.md` from the §8 template with project specifics, writes the first `INC-001`. |
 | **feature-plan** | "Implement feature X" | Reading order → `features/<name>/SPEC.md` + `PROMPT.md` (`mode: plan` output, `mode: implement` handoff). Never writes source code. |
 | **feature-increment** | Executing a handoff | The Phase 2 loop: verify → implement (or delegate) → re-run gate → document → next handoff or retire. |
+| **review** *(optional)* | Increment implemented, before it is documented as done | Reads the diff on two axes — does it meet the spec, does it meet this repo's standards — and reports findings without applying them. §7 rule 7 says *verify*; this is a procedure for the half a gate cannot check. |
 
 Keep skills thin. A skill that restates `AGENTS.md` is a second copy that will drift; a skill
 should encode *sequence*, and point at `AGENTS.md` for *rules*.
@@ -1230,6 +1240,7 @@ number, assume it is a wash.
 | Trusting a worker's "tests pass" | The most expensive lie in the loop | Re-run the gate yourself (§7 rule 7) |
 | Auto-repairing a malformed handoff | Hides that the previous session's model of the repo was wrong | Stop and report |
 | Planning that lives only in chat | Lost on the next clear | Write `SPEC.md` before implementing |
+| Building for a requirement nobody stated | Speculative abstraction is code maintained forever to serve a guess | Simplest thing that works (§7 rule 8) |
 | "Just this once" bypass of an invariant | Normalizes deviation; the system erodes from the exception, not the rule | If an invariant is wrong, change it deliberately — don't route around it |
 | Vendor paths hard-coded into the governance doc | Breaks on the next tool | Rules are portable; placement is per-project (§7) |
 | A messaging or tool protocol used as a delegation transport | The task arrives as untrusted chat input to a session that isn't bound to the repo | Delegation starts a *fresh, repo-bound* session (§12) |
@@ -1313,4 +1324,5 @@ FILE MAP (one question, one answer)
 NEVER
   trust a "tests pass" claim · auto-repair a handoff · hand-assign an INC
   duplicate a rule in two homes · leave a shipped feature in features/
+  abstract for one caller · scaffold for a requirement nobody stated
 ```
