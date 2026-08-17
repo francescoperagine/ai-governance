@@ -35,10 +35,22 @@ A monotonic integer at the top of the template. Bump it only when a change would
 existing project to do something — not for wording, rationale, or facts about third-party
 tools. Git history is the changelog.
 
-A project at v1 while the template is at v3 is not in debt. It is a project whose conventions
-have been stable for two revisions.
+A project at v1 while the template is at v4 is not in debt. It is a project whose conventions
+have been stable for three revisions.
 
 ## Scope
 
 Deliberately five files. No CI, no tests, no generator CLI. The failure mode for a personal
 governance system is not being too small — it is becoming a product.
+
+## Credits
+
+Two of the nine behavioral rules in §7 are vendor-neutral rewrites of existing tools, credited
+in full at the bottom of [`TEMPLATE.md`](TEMPLATE.md#credits):
+
+- **Rule 8**, simplest thing that works — [Ponytail](https://github.com/DietrichGebert/ponytail)
+  by Dietrich Gebert (MIT).
+- **Rule 9**, grill the plan — [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)
+  by Matt Pocock (MIT).
+
+Neither rule depends on the tool it came from — run it by hand or wire in the original.

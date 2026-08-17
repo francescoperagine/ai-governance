@@ -1,6 +1,6 @@
 # AI Project Governance — Template
 
-**Template version: 3**
+**Template version: 4**
 
 > Monotonic integer, same reasoning as `INC-XXX` (§5): no semver, because there is no
 > dependency to resolve and no "is this a minor?" to argue about. Bump it when a change would
@@ -85,8 +85,8 @@ If the version line is absent, the project predates versioning: treat it as an a
 must not overwrite, and report the delta instead of applying it.
 
 **Upgrade only when a change would actually change your behavior.** A project running v1 while
-the template sits at v3 is not in debt — it is a project whose conventions have been stable
-for two revisions. Chasing the version number is ceremony, and this system already spent its
+the template sits at v4 is not in debt — it is a project whose conventions have been stable
+for three revisions. Chasing the version number is ceremony, and this system already spent its
 ceremony budget in §2.
 
 ### Adoption handoff
@@ -301,8 +301,11 @@ than no folder: it tells the next session that unfinished work exists when it do
    A spec written from an unexamined request specifies the wrong thing precisely.
 3. Create features/<feature-name>/   (kebab-case)
 4. Write SPEC.md — scope, decisions, acceptance criteria, phase ledger
-5. Write PROMPT.md — self-contained entry point, mode: implement
-6. Self-conclude: deliver SPEC.md + PROMPT.md. Do NOT start implementing.
+5. GRILL the SPEC before it becomes a handoff (§7 rule 9) — attack your own plan for holes,
+   inconsistencies, and risks. Surviving findings go back to the human in ONE batch, with
+   the answers folded into the SPEC. This is the alignment checkpoint.
+6. Write PROMPT.md — self-contained entry point, mode: implement
+7. Self-conclude: deliver SPEC.md + PROMPT.md. Do NOT start implementing.
 ```
 
 ### Phase 2 — Implement (fresh session)
@@ -596,6 +599,21 @@ Before a handoff is executed — by a human glance or by a script
    A deliberate shortcut is fine when a comment names its ceiling; an unrequested
    generalization is not.
 
+9. **Grill the plan before you hand it over.** A plan you wrote is a plan you believe — which is
+   why it needs an adversarial pass, not why it can skip one. Before any Feature-tier spec
+   becomes a handoff, attack it: where is it underspecified, which acceptance criterion can't
+   actually be checked, what did the request assume that nobody stated, what breaks if that
+   assumption is wrong.
+   **Then interview the human on what survives — one batch (rule 2), real questions, answers
+   folded into the spec.** That exchange is the point of the rule, not a formality after it:
+   it is where agent and human find out whether they were describing the same feature. The
+   self-critique only decides which questions are worth the human's time.
+   This is also the gate on rule 4's requirement that a worker never receive an incomplete
+   design problem — nothing else enforces it. Skipping it doesn't save the conversation, it
+   defers it to implementation, where it costs an increment instead of a paragraph.
+   Scale it to the tier: Feature-tier always, Small when the change has a real unknown, Trivial
+   never.
+
 ### Where to put these rules
 
 **Best: the system prompt.** If the tool supports behavioral instructions injected at the
@@ -663,7 +681,7 @@ section first and must not undo what it lists. Empty is a valid value._
 
 ## Behavioral Rules (MANDATORY — read first)
 
-[EITHER paste the eight rules from §7 of the governance template here,
+[EITHER paste the nine rules from §7 of the governance template here,
  OR — if this tool supports system-level instructions — replace this section with:]
 
 > Operate per the behavioral rules in `[.cursorrules | output style | system prompt]`.
@@ -841,6 +859,7 @@ them however your tool allows:
 |---|---|---|
 | **bootstrap** | New project, or governance missing | Runs §9 scaffolding, fills `AGENTS.md` from the §8 template with project specifics, writes the first `INC-001`. |
 | **feature-plan** | "Implement feature X" | Reading order → `features/<name>/SPEC.md` + `PROMPT.md` (`mode: plan` output, `mode: implement` handoff). Never writes source code. |
+| **grill** | A SPEC exists, before it becomes a handoff | Adversarial pass over the plan — underspecified steps, uncheckable acceptance criteria, unstated assumptions, what breaks if they're wrong. Returns findings in one batch; does not edit the SPEC. §7 rule 9. |
 | **feature-increment** | Executing a handoff | The Phase 2 loop: verify → implement (or delegate) → re-run gate → document → next handoff or retire. |
 | **review** *(optional)* | Increment implemented, before it is documented as done | Reads the diff on two axes — does it meet the spec, does it meet this repo's standards — and reports findings without applying them. §7 rule 7 says *verify*; this is a procedure for the half a gate cannot check. |
 
@@ -866,6 +885,7 @@ should encode *sequence*, and point at `AGENTS.md` for *rules*.
 | Trusting a worker's "tests pass" | The most expensive lie in the loop | Re-run the gate yourself (§7 rule 7) |
 | Auto-repairing a malformed handoff | Hides that the previous session's model of the repo was wrong | Stop and report |
 | Planning that lives only in chat | Lost on the next clear | Write `SPEC.md` before implementing |
+| Handing over a spec nobody attacked | The gaps surface during implementation, where they cost an increment instead of a paragraph | Grill the plan, batch what survives to the human (§7 rule 9) |
 | Building for a requirement nobody stated | Speculative abstraction is code maintained forever to serve a guess | Simplest thing that works (§7 rule 8) |
 | "Just this once" bypass of an invariant | Normalizes deviation; the system erodes from the exception, not the rule | If an invariant is wrong, change it deliberately — don't route around it |
 | Vendor paths hard-coded into the governance doc | Breaks on the next tool | Rules are portable; placement is per-project (§7) |
@@ -884,7 +904,9 @@ TIER THE WORK
 
 PLAN (reasoning session)
   AGENTS.md → ARCHITECTURE → PROJECT
-  write features/<name>/SPEC.md + PROMPT.md  (mode: implement, banner on line 1)
+  write features/<name>/SPEC.md
+  GRILL it → one batch of findings to the human → answers into the SPEC
+  then PROMPT.md  (mode: implement, banner on line 1)
   do NOT implement
 
 IMPLEMENT (fresh session)
@@ -913,3 +935,25 @@ NEVER
   duplicate a rule in two homes · leave a shipped feature in features/
   abstract for one caller · scaffold for a requirement nobody stated
 ```
+
+---
+
+## Credits
+
+Two rules in §7 are vendor-neutral rewrites of tools that exist. The rewrite is what makes them
+portable; it is not what makes them original, and the sources are named here for that reason.
+
+**Rule 8 — simplest thing that works** comes from [Ponytail](https://github.com/DietrichGebert/ponytail)
+by Dietrich Gebert (MIT). The underlying idea is older than any of us — XP's "do the simplest
+thing that could possibly work", YAGNI — but the framing rule 8 borrows is Ponytail's: a ladder
+you climb only until a rung holds, and a deliberate shortcut annotated with the ceiling it
+accepts rather than hidden.
+
+**Rule 9 — grill the plan** comes from [grill-me](https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md)
+by Matt Pocock (MIT), described there as "a relentless interview to sharpen a plan or design".
+Two things are borrowed and both are load-bearing: the pass belongs *after* a plan exists and
+*before* it is executed, and its output is an interview with the human, not a private critique
+the agent resolves alone. Rule 9 adds only the tier scaling and the tie to rule 4.
+
+Neither rule depends on the tool it came from. That is the point: adopt the rule, run it by
+hand, or wire in the original — the governance system cannot tell the difference.
