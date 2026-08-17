@@ -1,6 +1,6 @@
 # AI Project Governance — Template
 
-**Template version: 4**
+**Template version: 5**
 
 > Monotonic integer, same reasoning as `INC-XXX` (§5): no semver, because there is no
 > dependency to resolve and no "is this a minor?" to argue about. Bump it when a change would
