@@ -4,17 +4,17 @@ A stack-agnostic, tool-agnostic system for running AI-assisted software projects
 tiered, where knowledge lives, how sessions hand off to each other on disk, and how the whole
 thing is optionally automated.
 
-**[`ai_governance_template.md`](ai_governance_template.md) is the whole system.** The two
+**[`TEMPLATE.md`](TEMPLATE.md) is the whole system.** The two
 scripts are extracted from its §9 so they don't have to be copy-pasted per project.
 
-[`ai_governance_rationale.md`](ai_governance_rationale.md) holds the optional automation
+[`RATIONALE.md`](RATIONALE.md) holds the optional automation
 (§11–§12), the note on context-compression proxies (§13), and the design rationale (§15).
 Adopting projects never read it. It is separate so that revising it — reference implementations
 age, cached vendor facts age faster — does not bump the template's version.
 
 ## Use it
 
-Hand `ai_governance_template.md` to an agent in the target project, with no other instruction.
+Hand `TEMPLATE.md` to an agent in the target project, with no other instruction.
 It carries a directive block that tells the agent to adopt the system, in plan mode, without
 touching source code. If you give it an instruction alongside the file, yours wins.
 

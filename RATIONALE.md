@@ -1,6 +1,6 @@
 # AI Project Governance — Rationale & Optional Automation
 
-**Companion to [`ai_governance_template.md`](ai_governance_template.md).**
+**Companion to [`TEMPLATE.md`](TEMPLATE.md).**
 
 > **Adopting projects do not read this file.** The template says so itself: everything here is
 > either optional automation or the system's own rationale, and neither is something a project

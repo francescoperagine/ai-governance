@@ -27,7 +27,7 @@
 > **Read in this order — not the whole file:** §0 (your task) → §2 (work tiers) → §4–§5
 > (lifecycle, increments) → §8 (the `AGENTS.md` template you will fill in) → §9 (scaffolding).
 > Optional automation and the system's own rationale live in a separate file,
-> `ai_governance_rationale.md` — do not open it unless the user asked for automation.
+> `RATIONALE.md` — do not open it unless the user asked for automation.
 >
 > **Anything you cannot determine from the repo** — project identity, output language,
 > long-term direction — becomes a `TODO(human):` marker, never a guess. Collect every open
@@ -42,7 +42,7 @@
 > paste-ready handoff that has an agent adopt the system for you. §1–§10 are the system itself
 > (manual operation, any tool). Optional automation — which needs headless invocation or
 > subagent spawning — and the design rationale behind all of this are in the companion file
-> `ai_governance_rationale.md`. Adopting projects never need it.
+> `RATIONALE.md`. Adopting projects never need it.
 >
 > **Design constraint: nothing here may depend on a specific vendor, model, or subscription
 > tier.** Where a vendor is named it is a reference implementation, clearly marked as such.
@@ -54,7 +54,7 @@
 Three ways in, in increasing order of effort.
 
 **Read it yourself** if you want to understand the system: §1–§5 is the whole thing. §6 is the
-mechanism that makes multi-session work reliable. `ai_governance_rationale.md` is optional and
+mechanism that makes multi-session work reliable. `RATIONALE.md` is optional and
 can wait forever.
 
 **Hand it to an agent** to set a project up: paste the adoption handoff below into a fresh
@@ -79,7 +79,7 @@ What an upgrade may and may not touch:
 | **Rewrite freely** | The behavioral-rules block (§7) and the work-tier definitions — they are verbatim template text. |
 | **Migrate, reporting each change** | Structural differences: renamed files, new directories, new front-matter fields. |
 | **Never touch** | Stack, commands, invariants, localization, anything under `## Project Deviations`, and all existing history. |
-| **Ignore entirely** | `ai_governance_rationale.md`. Projects don't consume the template's own rationale. |
+| **Ignore entirely** | `RATIONALE.md`. Projects don't consume the template's own rationale. |
 
 If the version line is absent, the project predates versioning: treat it as an adoption that
 must not overwrite, and report the delta instead of applying it.
@@ -118,7 +118,7 @@ stop_conditions:
 > If you believe implementation should start now, say so and stop.**
 
 ## Reading Order
-1. `<path>/ai_governance_template.md` — the system being adopted. Read §2–§9 fully.
+1. `<path>/TEMPLATE.md` — the system being adopted. Read §2–§9 fully.
 2. The repo root and `docs/` — what already exists.
 3. `README.md` and `package.json` (or equivalent) — stack, commands, project identity.
 
@@ -527,7 +527,7 @@ if it doesn't, and then Phase 4 applies.)_
 ### Validation rules (mechanical — no model judgment)
 
 Before a handoff is executed — by a human glance or by a script
-(`ai_governance_rationale.md` §11):
+(`RATIONALE.md` §11):
 
 - All front-matter keys present; `feature` matches the directory name.
 - Every path in `files_in_scope` exists, or is marked `NEW:`.
@@ -760,7 +760,7 @@ missing.
 #!/usr/bin/env bash
 # scaffold.sh — create the governance structure if absent. Never overwrites.
 # Idempotent: safe to run against a repo that is already partly set up.
-# See ai_governance_template.md §9.
+# See TEMPLATE.md §9.
 set -euo pipefail
 
 cd "${1:-.}"
@@ -795,7 +795,7 @@ a script, not an agent.
 # docs-check.sh — fail if a markdown doc references a repo path that doesn't exist.
 # Catches link rot: a CHANGELOG pointing at a file that moved into docs/archive/
 # misleads every future session, silently and forever.
-# See ai_governance_template.md §9.
+# See TEMPLATE.md §9.
 set -uo pipefail
 
 cd "${1:-.}"
@@ -806,10 +806,9 @@ rc=0
 # Retiring a feature (§4 Phase 4) deletes its folder, and every past reference to it would
 # otherwise be reported as rot forever. Only documents that claim to describe the present
 # are checked.
-# The two ai_governance_*.md files are excluded for the same reason: they are the manual, and
-# they name paths (docs/PROJECT.md, features/<name>/SPEC.md) that exist in adopting projects,
-# not here.
-EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|ai_governance_[a-z]+\.md'
+# The manual itself (TEMPLATE.md, RATIONALE.md) is excluded for the same reason: it names
+# paths (docs/PROJECT.md, features/<name>/SPEC.md) that exist in adopting projects, not here.
+EXCLUDE='node_modules|/\.|/docs/archive/|/docs/adr/|/CHANGELOG\.md|\./(TEMPLATE|RATIONALE)\.md'
 
 while IFS=: read -r file _ ref; do
   ref="${ref%\`*}"

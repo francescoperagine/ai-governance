@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scaffold.sh — create the governance structure if absent. Never overwrites.
 # Idempotent: safe to run against a repo that is already partly set up.
-# See ai_governance_template.md §9.
+# See TEMPLATE.md §9.
 set -euo pipefail
 
 cd "${1:-.}"
