@@ -4,13 +4,11 @@ A stack-agnostic, tool-agnostic system for running AI-assisted software projects
 tiered, where knowledge lives, how sessions hand off to each other on disk, and how the whole
 thing is optionally automated.
 
-**[`TEMPLATE.md`](TEMPLATE.md) is the whole system.** The two
-scripts are extracted from its §9 so they don't have to be copy-pasted per project.
+**[`TEMPLATE.md`](TEMPLATE.md) is the whole system.** The two scripts are extracted from its §9 so they don't have to be copy-pasted per project.
 
-[`RATIONALE.md`](RATIONALE.md) holds the optional automation
-(§11–§12), the note on context-compression proxies (§13), and the design rationale (§15).
-Adopting projects never read it. It is separate so that revising it — reference implementations
-age, cached vendor facts age faster — does not bump the template's version.
+[`RATIONALE.md`](RATIONALE.md) holds the optional automation (§11–§12), the note on
+context-compression proxies (§13), and the design rationale (§15). Adopting projects never read it. 
+It is separate so that revising it — reference implementations age, cached vendor facts age faster — does not bump the template's version.
 
 ## Use it
 
