@@ -567,8 +567,14 @@ Before a handoff is executed — by a human glance or by a script
      that implementation is mechanical.
    - Choose an execution strategy — `DIRECT`, `SINGLE_WORKER`, `MULTI_WORKER` — based on
      remaining *decision* complexity, not implementation size.
-   - Delegate whenever implementation is primarily mechanical, regardless of size: preserving
-     reasoning context is worth more than minimizing total tokens.
+   - Delegate when implementation is primarily mechanical **and the reasoner's context is the
+     resource under pressure.** Delegation raises total spend — the spec, the per-call startup
+     floor, the worker's run, and the verification rule 7 makes mandatory — and buys a
+     longer-lived reasoning session. That is the trade. On a fresh session there is nothing to
+     preserve, and it is pure waste.
+   - **Delegation pays when the specification is much smaller than the work.** If you cannot
+     compress the task into a spec, you have already done it: finish it inline. The cost model
+     and the per-call floor are in rationale §12b.
    - **Preferred flow: several short reasoning sessions connected by documents**, rather than
      one long reasoning session.
 
@@ -900,7 +906,10 @@ should encode *sequence*, and point at `AGENTS.md` for *rules*.
 TIER THE WORK
   typo/one-liner        → just do it
   contained fix         → CHANGELOG entry only
-  feature               → full lifecycle below
+  
+DELEGATE OR NOT
+  spec much smaller than the work   → delegate
+  cannot compress it                → you already did it: finish it inline
 
 PLAN (reasoning session)
   AGENTS.md → ARCHITECTURE → PROJECT

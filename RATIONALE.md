@@ -271,8 +271,8 @@ out loud: preserving reasoning context is worth more than minimizing total token
 is the smallest possible bill, delegate less. If it is longer-lived reasoning sessions and
 fewer restarts, delegate more. They are different goals; pick knowingly.
 
-**The break-even is a ratio, not a size.** Delegate when the *specification is much smaller
-than the work*:
+**The break-even is a ratio, not a size.** Rule 4 states the test; this is the arithmetic
+behind it. Delegate when the *specification is much smaller than the work*:
 
 ```
 delegate  ≈  spec + floor + verification        (verification is not optional)
@@ -281,8 +281,13 @@ direct    ≈  the context the work consumes inline
 
 A task that burns 50k tokens of reading and iteration but fits in a 500-token spec is an
 enormous win. A task that needs a 2k spec to save 5k of work is a loss, and you found out by
-writing the spec — at which point you had already done the thinking. **If you cannot compress
-the task, you have already done it: just finish it.**
+writing the spec — at which point you had already done the thinking. If you cannot compress the task, 
+you have already done it: just finish it.
+
+**Verification does not scale down.** Reading a diff and re-running a gate costs roughly the
+same whether the worker touched twenty lines or two hundred. On a small task that near-fixed
+cost alone can exceed doing the work inline, which is why the ratio test is necessary but not
+sufficient.
 
 **The floor is per call, so batch.** Every invocation pays for a system prompt, tool schemas,
 and repo-rule injection before reading a word of the task — on one current CLI that measures
